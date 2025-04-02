@@ -56,14 +56,25 @@ app.post('/submit-block', async (req, res) => {
         return res.status(400).json({ error: 'Khối không khớp với chuỗi hiện tại' });
     }
 
+    for (const tx of block.data) {
+        await walletsCollection.doc(tx.from).update({ balance: admin.firestore.FieldValue.increment(-tx.amount) });
+        await walletsCollection.doc(tx.to).update({ balance: admin.firestore.FieldValue.increment(tx.amount) }, { merge: true });
+    }
     await walletsCollection.doc(miner).update({ balance: admin.firestore.FieldValue.increment(10) }, { merge: true });
     await blockchainCollection.doc(block.index.toString()).set({ ...block });
+    await blockchainCollection.doc('pending').set({ transactions: [] });
+
     res.json(block);
 });
 
 app.get('/chain', async (req, res) => {
     const snapshot = await blockchainCollection.orderBy('index').get();
     res.json(snapshot.docs.map(doc => doc.data()));
+});
+
+app.get('/pending', async (req, res) => {
+    const pendingSnapshot = await blockchainCollection.doc('pending').get();
+    res.json(pendingSnapshot.exists ? pendingSnapshot.data().transactions : []);
 });
 
 app.listen(port, () => console.log(`Mining Node chạy tại http://localhost:${port}`));
