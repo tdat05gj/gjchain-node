@@ -70,10 +70,13 @@
             const chain = await chainResponse.json();
             const latestBlock = chain[chain.length - 1];
 
+            const pendingResponse = await fetch('/pending');
+            const pendingTransactions = await pendingResponse.json();
+
             const block = {
                 index: chain.length,
                 timestamp: new Date().toISOString(),
-                data: [],
+                data: pendingTransactions,
                 previousHash: latestBlock.hash,
                 miner: minerAddress,
                 nonce: 0
