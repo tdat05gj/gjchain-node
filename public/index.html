@@ -2,14 +2,134 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GJChain Mining Node</title>
-    <link rel="stylesheet" href="/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #1a73e8;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h2 {
+            color: #1a73e8;
+            margin-top: 0;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: calc(100% - 22px);
+        }
+        button {
+            background: #1a73e8;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background: #1557b0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f1f3f4;
+        }
+        .wallet-info {
+            font-weight: bold;
+            color: #d93025;
+        }
+    </style>
 </head>
 <body>
-    <h1>GJChain Mining Node</h1>
-    <input type="text" id="minerAddress" placeholder="Địa chỉ ví (gj...)">
-    <button onclick="mine()">Đào Khối</button>
-    <pre id="output"></pre>
-    <script src="/script.js"></script>
+    <div class="container">
+        <h1>GJChain Mining Node</h1>
+
+        <!-- Đăng nhập ví -->
+        <div class="section">
+            <h2>Đăng nhập ví</h2>
+            <input type="text" id="privateKey" placeholder="Nhập private key">
+            <button onclick="loginWallet()">Đăng nhập</button>
+            <div id="walletInfo" class="wallet-info"></div>
+        </div>
+
+        <!-- Gửi coin -->
+        <div class="section">
+            <h2>Gửi GJCoin</h2>
+            <input type="text" id="toAddress" placeholder="Địa chỉ nhận">
+            <input type="number" id="amount" placeholder="Số lượng GJCoin">
+            <button onclick="sendCoin()">Gửi</button>
+            <div id="sendStatus"></div>
+        </div>
+
+        <!-- Mining -->
+        <div class="section">
+            <h2>Đào GJCoin</h2>
+            <button onclick="startMining()">Bắt đầu đào</button>
+            <div id="miningStatus"></div>
+        </div>
+
+        <!-- Danh sách holder -->
+        <div class="section">
+            <h2>Danh sách Holder</h2>
+            <table id="holdersTable">
+                <thead>
+                    <tr>
+                        <th>Địa chỉ</th>
+                        <th>Số dư (GJCoin)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- Lịch sử giao dịch -->
+        <div class="section">
+            <h2>Lịch sử giao dịch</h2>
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Loại</th>
+                        <th>Từ</th>
+                        <th>Đến</th>
+                        <th>Số lượng</th>
+                        <th>Thời gian</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="miner.js"></script>
 </body>
 </html>
