@@ -3,133 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GJChain Mining Node</title>
+    <title>GJ Mining</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, #ff5e62, #f7b733);
+            color: #fff;
             margin: 0;
             padding: 20px;
-            color: #333;
         }
         .container {
-            max-width: 900px;
+            max-width: 800px;
             margin: 0 auto;
-            background: white;
+            background: rgba(255, 255, 255, 0.1);
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
         h1 {
             text-align: center;
-            color: #1a73e8;
-        }
-        .section {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        .section h2 {
-            color: #1a73e8;
-            margin-top: 0;
+            color: #fff;
         }
         input, button {
             padding: 10px;
-            margin: 5px 0;
+            margin: 5px;
+            border: none;
             border-radius: 5px;
-            border: 1px solid #ccc;
-            width: calc(100% - 22px);
+        }
+        input {
+            background: #fff;
+            color: #333;
+            width: 70%;
         }
         button {
-            background: #1a73e8;
-            color: white;
+            background: #ff5e62;
+            color: #fff;
             cursor: pointer;
-            border: none;
+            transition: background 0.3s;
         }
         button:hover {
-            background: #1557b0;
+            background: #e04e52;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        #miningStatus {
             margin-top: 10px;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background: #f1f3f4;
-        }
-        .wallet-info {
-            font-weight: bold;
-            color: #d93025;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>GJChain Mining Node</h1>
-
-        <!-- Đăng nhập ví -->
-        <div class="section">
-            <h2>Đăng nhập ví</h2>
-            <input type="text" id="privateKey" placeholder="Nhập private key">
-            <button onclick="loginWallet()">Đăng nhập</button>
-            <div id="walletInfo" class="wallet-info"></div>
-        </div>
-
-        <!-- Gửi coin -->
-        <div class="section">
-            <h2>Gửi GJCoin</h2>
-            <input type="text" id="toAddress" placeholder="Địa chỉ nhận">
-            <input type="number" id="amount" placeholder="Số lượng GJCoin">
-            <button onclick="sendCoin()">Gửi</button>
-            <div id="sendStatus"></div>
-        </div>
-
-        <!-- Mining -->
-        <div class="section">
-            <h2>Đào GJCoin</h2>
-            <button onclick="startMining()">Bắt đầu đào</button>
-            <div id="miningStatus"></div>
-        </div>
-
-        <!-- Danh sách holder -->
-        <div class="section">
-            <h2>Danh sách Holder</h2>
-            <table id="holdersTable">
-                <thead>
-                    <tr>
-                        <th>Địa chỉ</th>
-                        <th>Số dư (GJCoin)</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-
-        <!-- Lịch sử giao dịch -->
-        <div class="section">
-            <h2>Lịch sử giao dịch</h2>
-            <table id="historyTable">
-                <thead>
-                    <tr>
-                        <th>Loại</th>
-                        <th>Từ</th>
-                        <th>Đến</th>
-                        <th>Số lượng</th>
-                        <th>Thời gian</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
+        <h1>GJ Mining</h1>
+        <input type="text" id="minerAddress" placeholder="Địa chỉ ví của bạn">
+        <button onclick="startMining()">Bắt đầu đào</button>
+        <div id="miningStatus"></div>
     </div>
+    <script>
+        async function startMining() {
+            const minerAddress = document.getElementById('minerAddress').value;
+            if (!minerAddress) return alert('Vui lòng nhập địa chỉ ví');
 
-    <script src="miner.js"></script>
+            const status = document.getElementById('miningStatus');
+            status.textContent = 'Đang tải chuỗi khối...';
+
+            const chainResponse = await fetch('/chain');
+            const chain = await chainResponse.json();
+            const latestBlock = chain[chain.length - 1];
+
+            const block = {
+                index: chain.length,
+                timestamp: new Date().toISOString(),
+                data: [],
+                previousHash: latestBlock.hash,
+                miner: minerAddress,
+                nonce: 0
+            };
+
+            status.textContent = 'Bắt đầu đào...';
+            const difficulty = 4;
+            const target = '0'.repeat(difficulty);
+            block.hash = calculateHash(block);
+
+            while (block.hash.substring(0, difficulty) !== target) {
+                block.nonce++;
+                block.hash = calculateHash(block);
+            }
+
+            status.textContent = 'Đào xong! Gửi khối lên server...';
+            const submitResponse = await fetch('/submit-block', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(block)
+            });
+            const result = await submitResponse.json();
+
+            status.textContent = result.error || `Khối ${block.index} đã được chấp nhận!`;
+        }
+
+        function calculateHash(block) {
+            const data = block.index + block.timestamp + JSON.stringify(block.data) + block.previousHash + block.miner + block.nonce;
+            return CryptoJS.SHA256(data).toString(CryptoJS.enc.Hex);
+        }
+    </script>
 </body>
 </html>
