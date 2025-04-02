@@ -46,6 +46,7 @@ app.post('/submit-block', async (req, res) => {
     const block = new Block(index, timestamp, data, previousHash, miner, nonce, hash);
     const difficulty = 4;
 
+    // Xác nhận khối hợp lệ
     if (block.hash !== block.calculateHash() || block.hash.substring(0, difficulty) !== '0'.repeat(difficulty)) {
         return res.status(400).json({ error: 'Khối không hợp lệ' });
     }
@@ -56,15 +57,36 @@ app.post('/submit-block', async (req, res) => {
         return res.status(400).json({ error: 'Khối không khớp với chuỗi hiện tại' });
     }
 
-    for (const tx of block.data) {
-        await walletsCollection.doc(tx.from).update({ balance: admin.firestore.FieldValue.increment(-tx.amount) });
-        await walletsCollection.doc(tx.to).update({ balance: admin.firestore.FieldValue.increment(tx.amount) }, { merge: true });
-    }
-    await walletsCollection.doc(miner).update({ balance: admin.firestore.FieldValue.increment(10) }, { merge: true });
-    await blockchainCollection.doc(block.index.toString()).set({ ...block });
-    await blockchainCollection.doc('pending').set({ transactions: [] });
+    // Xử lý giao dịch trong khối
+    try {
+        for (const tx of block.data) {
+            const fromWallet = await walletsCollection.doc(tx.from).get();
+            if (!fromWallet.exists || fromWallet.data().balance < tx.amount) {
+                return res.status(400).json({ error: `Ví ${tx.from} không đủ số dư cho giao dịch` });
+            }
 
-    res.json(block);
+            // Cập nhật số dư
+            await walletsCollection.doc(tx.from).update({
+                balance: admin.firestore.FieldValue.increment(-tx.amount)
+            });
+            await walletsCollection.doc(tx.to).update({
+                balance: admin.firestore.FieldValue.increment(tx.amount)
+            }, { merge: true });
+        }
+
+        // Thưởng cho miner
+        await walletsCollection.doc(miner).update({
+            balance: admin.firestore.FieldValue.increment(10)
+        }, { merge: true });
+
+        // Lưu khối vào chuỗi và xóa pending transactions
+        await blockchainCollection.doc(block.index.toString()).set({ ...block });
+        await blockchainCollection.doc('pending').set({ transactions: [] });
+
+        res.json({ message: 'Khối đã được chấp nhận và giao dịch đã xử lý', block });
+    } catch (error) {
+        res.status(500).json({ error: 'Lỗi khi xử lý giao dịch: ' + error.message });
+    }
 });
 
 app.get('/chain', async (req, res) => {
