@@ -4,7 +4,20 @@ const admin = require('firebase-admin');
 const app = express();
 const port = process.env.PORT || 3003;
 
-const serviceAccount = require('../gjchain/firebase-adminsdk.json');
+// Khởi tạo Firebase với biến môi trường
+let serviceAccount;
+if (process.env.FIREBASE_ADMINSDK) {
+    try {
+        serviceAccount = JSON.parse(process.env.FIREBASE_ADMINSDK);
+    } catch (error) {
+        console.error('Error parsing FIREBASE_ADMINSDK:', error);
+        throw new Error('Invalid FIREBASE_ADMINSDK environment variable');
+    }
+} else {
+    console.log('FIREBASE_ADMINSDK not found, falling back to local file');
+    serviceAccount = require('../gjchain/firebase-adminsdk.json');
+}
+
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 const blockchainCollection = admin.firestore().collection('gjchain');
 const walletsCollection = admin.firestore().collection('wallets');
@@ -68,7 +81,7 @@ app.post('/mine', async (req, res) => {
     res.json(block);
 });
 
-const wss = new WebSocket.Server({ port: port + 1 });
+const wss = new WebSocket.Server({ port: parseInt(port, 10) + 1 }); // Sửa lỗi cổng
 wss.on('connection', ws => {
     ws.on('message', async message => {
         const data = JSON.parse(message);
