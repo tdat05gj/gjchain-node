@@ -1,112 +1,90 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GJ Mining</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <title>GJChain Node - Đào Block</title>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #ff5e62, #f7b733);
-            color: #fff;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-        h1 {
-            text-align: center;
-            color: #fff;
-        }
-        input, button {
-            padding: 10px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-        }
-        input {
-            background: #fff;
-            color: #333;
-            width: 70%;
-        }
-        button {
-            background: #ff5e62;
-            color: #fff;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background: #e04e52;
-        }
-        #miningStatus {
-            margin-top: 10px;
-            font-style: italic;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px; margin: 5px; }
+        textarea { width: 100%; height: 100px; }
+        .section { margin-bottom: 20px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>GJ Mining</h1>
-        <input type="text" id="minerAddress" placeholder="Địa chỉ ví của bạn">
-        <button onclick="startMining()">Bắt đầu đào</button>
-        <div id="miningStatus"></div>
+    <h1>GJChain Node - Đóng Góp Vào Mạng Lưới</h1>
+
+    <div class="section">
+        <h2>Tạo Giao Dịch</h2>
+        <input id="from" placeholder="Địa chỉ gửi"><br>
+        <input id="to" placeholder="Địa chỉ nhận"><br>
+        <input id="amount" type="number" placeholder="Số lượng"><br>
+        <button onclick="createTransaction()">Gửi Giao Dịch</button>
+        <p id="tx-result"></p>
     </div>
+
+    <div class="section">
+        <h2>Đào Block</h2>
+        <input id="miner" placeholder="Địa chỉ miner"><br>
+        <button onclick="mineBlock()">Bắt Đầu Đào</button>
+        <p id="mine-result"></p>
+    </div>
+
+    <div class="section">
+        <h2>Kết Nối Peer</h2>
+        <input id="peer" placeholder="ws://localhost:3001"><br>
+        <button onclick="connectPeer()">Kết Nối</button>
+        <p id="peer-result"></p>
+    </div>
+
+    <div class="section">
+        <h2>Chuỗi Block</h2>
+        <textarea id="chain" readonly></textarea>
+        <button onclick="refreshChain()">Làm Mới</button>
+    </div>
+
     <script>
-        async function startMining() {
-            const minerAddress = document.getElementById('minerAddress').value;
-            if (!minerAddress) return alert('Vui lòng nhập địa chỉ ví');
-
-            const status = document.getElementById('miningStatus');
-            status.textContent = 'Đang tải chuỗi khối...';
-
-            const chainResponse = await fetch('/chain');
-            const chain = await chainResponse.json();
-            const latestBlock = chain[chain.length - 1];
-
-            const pendingResponse = await fetch('/pending');
-            const pendingTransactions = await pendingResponse.json();
-
-            const block = {
-                index: chain.length,
-                timestamp: new Date().toISOString(),
-                data: pendingTransactions,
-                previousHash: latestBlock.hash,
-                miner: minerAddress,
-                nonce: 0
-            };
-
-            status.textContent = 'Bắt đầu đào...';
-            const difficulty = 4;
-            const target = '0'.repeat(difficulty);
-            block.hash = calculateHash(block);
-
-            while (block.hash.substring(0, difficulty) !== target) {
-                block.nonce++;
-                block.hash = calculateHash(block);
-            }
-
-            status.textContent = 'Đào xong! Gửi khối lên server...';
-            const submitResponse = await fetch('/submit-block', {
+        async function createTransaction() {
+            const from = document.getElementById('from').value;
+            const to = document.getElementById('to').value;
+            const amount = parseInt(document.getElementById('amount').value);
+            const response = await fetch('/transaction', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(block)
+                body: JSON.stringify({ from, to, amount })
             });
-            const result = await submitResponse.json();
-
-            status.textContent = result.error || `Khối ${block.index} đã được chấp nhận!`;
+            const result = await response.json();
+            document.getElementById('tx-result').innerText = JSON.stringify(result, null, 2);
         }
 
-        function calculateHash(block) {
-            const data = block.index + block.timestamp + JSON.stringify(block.data) + block.previousHash + block.miner + block.nonce;
-            return CryptoJS.SHA256(data).toString(CryptoJS.enc.Hex);
+        async function mineBlock() {
+            const miner = document.getElementById('miner').value;
+            const response = await fetch('/mine', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ minerAddress: miner })
+            });
+            const result = await response.json();
+            document.getElementById('mine-result').innerText = JSON.stringify(result, null, 2);
         }
+
+        async function connectPeer() {
+            const peer = document.getElementById('peer').value;
+            const response = await fetch('/peers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ peer })
+            });
+            const result = await response.json();
+            document.getElementById('peer-result').innerText = result.message;
+        }
+
+        async function refreshChain() {
+            const response = await fetch('/chain');
+            const chain = await response.json();
+            document.getElementById('chain').value = JSON.stringify(chain, null, 2);
+        }
+
+        refreshChain();
     </script>
 </body>
 </html>
